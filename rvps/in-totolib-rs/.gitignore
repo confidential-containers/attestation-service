@@ -1,0 +1,8 @@
+/target
+
+# test generated files
+untar.link
+foo.py
+
+# cache
+Cargo.lock
