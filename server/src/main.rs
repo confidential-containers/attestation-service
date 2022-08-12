@@ -10,12 +10,18 @@ use tokio::sync::RwLock;
 extern crate lazy_static;
 
 pub mod management_api {
+    #![allow(unknown_lints)]
+    #![allow(clippy::derive_partial_eq_without_eq)]
     tonic::include_proto!("management");
 }
 pub mod attestation_api {
+    #![allow(unknown_lints)]
+    #![allow(clippy::derive_partial_eq_without_eq)]
     tonic::include_proto!("attestation");
 }
 pub mod common {
+    #![allow(unknown_lints)]
+    #![allow(clippy::derive_partial_eq_without_eq)]
     tonic::include_proto!("common");
 }
 
