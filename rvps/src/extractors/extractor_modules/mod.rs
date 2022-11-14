@@ -10,6 +10,9 @@ use std::collections::HashMap;
 
 use crate::reference_value::ReferenceValue;
 
+#[cfg(feature = "in-toto")]
+pub mod in_toto;
+
 /// Extractor is a standard interface that all provenance extractors
 /// need to implement. Here reference_value can be modified in the
 /// handler, added any field if needed.
@@ -27,9 +30,14 @@ pub struct ExtractorModuleList {
 
 impl ExtractorModuleList {
     pub fn new() -> ExtractorModuleList {
-        // TODO: when new extractor is added, change mod_list
-        // to mutable.
-        let mod_list = HashMap::new();
+        let mut mod_list = HashMap::new();
+
+        #[cfg(feature = "in-toto")]
+        {
+            let instantiate_func: ExtractorInstantiateFunc =
+                Box::new(|| -> ExtractorInstance { Box::new(in_toto::InTotoExtractor::new()) });
+            mod_list.insert("in-toto".to_string(), instantiate_func);
+        }
 
         ExtractorModuleList { mod_list }
     }
