@@ -12,31 +12,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 /// Default version of ReferenceValue
 pub const REFERENCE_VALUE_VERSION: &str = "0.1.0";
 
-/// A HashValuePair stores a hash algorithm name
-/// and relative artifact's hash value due to
-/// the algorithm.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct HashValuePair {
-    alg: String,
-    value: String,
-}
-
-impl HashValuePair {
-    pub fn new(alg: String, value: String) -> Self {
-        Self { alg, value }
-    }
-
-    pub fn alg(&self) -> &String {
-        &self.alg
-    }
-
-    pub fn value(&self) -> &String {
-        &self.value
-    }
-}
-
 /// Helper to deserialize an expired time
-fn primitive_date_time_from_str<'de, D: Deserializer<'de>>(
+pub fn primitive_date_time_from_str<'de, D: Deserializer<'de>>(
     d: D,
 ) -> Result<DateTime<Utc>, D::Error> {
     let s = <Option<&str>>::deserialize(d)?
@@ -66,8 +43,8 @@ pub struct ReferenceValue {
     name: String,
     #[serde(deserialize_with = "primitive_date_time_from_str")]
     expired: DateTime<Utc>,
-    #[serde(rename = "hash-value")]
-    hash_value: Vec<HashValuePair>,
+    #[serde(rename = "reference-values")]
+    reference_values: Vec<String>,
 }
 
 /// Set the default version for ReferenceValue
@@ -87,7 +64,7 @@ impl ReferenceValue {
             expired: Utc::now()
                 .with_nanosecond(0)
                 .ok_or_else(|| anyhow!("set nanosecond failed."))?,
-            hash_value: Vec::new(),
+            reference_values: Vec::new(),
         })
     }
 
@@ -114,14 +91,14 @@ impl ReferenceValue {
     }
 
     /// Get version of the ReferenceValue.
-    pub fn add_hash_value(mut self, alg: String, value: String) -> Self {
-        self.hash_value.push(HashValuePair::new(alg, value));
+    pub fn add_reference_value(mut self, value: String) -> Self {
+        self.reference_values.push(value);
         self
     }
 
     /// Get version of the ReferenceValue.
-    pub fn hash_values(&self) -> &Vec<HashValuePair> {
-        &self.hash_value
+    pub fn reference_value(&self) -> &Vec<String> {
+        &self.reference_values
     }
 
     /// Set name for Reference Value
@@ -163,7 +140,7 @@ mod test {
             .set_version("1.0.0")
             .set_name("artifact")
             .set_expired(Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap())
-            .add_hash_value("sha512".into(), "123".into());
+            .add_reference_value("123".into());
 
         assert_eq!(rv.version(), "1.0.0");
 
@@ -171,10 +148,9 @@ mod test {
             "expired": "1970-01-01T00:00:00Z",
             "name": "artifact",
             "version": "1.0.0",
-            "hash-value": [{
-                "alg": "sha512",
-                "value": "123"
-            }]
+            "reference-values": [
+                "123"
+            ]
         });
 
         let serialized_rf = serde_json::to_value(&rv).unwrap();
@@ -188,17 +164,16 @@ mod test {
             .set_version("1.0.0")
             .set_name("artifact")
             .set_expired(Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap())
-            .add_hash_value("sha512".into(), "123".into());
+            .add_reference_value("123".into());
 
         assert_eq!(rv.version(), "1.0.0");
         let rv_json = r#"{
             "expired": "1970-01-01T00:00:00Z",
             "name": "artifact",
             "version": "1.0.0",
-            "hash-value": [{
-                "alg": "sha512",
-                "value": "123"
-            }]
+            "reference-values": [
+                "123"
+            ]
         }"#;
         let deserialized_rf: ReferenceValue = serde_json::from_str(&rv_json).unwrap();
         assert_eq!(deserialized_rf, rv);

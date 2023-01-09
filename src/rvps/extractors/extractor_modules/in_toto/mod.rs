@@ -184,18 +184,13 @@ impl Extractor for InTotoExtractor {
                 .set_version(REFERENCE_VALUE_VERSION)
                 .set_expired(expires);
 
-            for (alg, value) in digests {
-                let alg = serde_json::to_string(alg)?
-                    .trim_end_matches('"')
-                    .trim_start_matches('"')
-                    .to_string();
-
+            for value in digests.values() {
                 let value = serde_json::to_string(value)?
                     .trim_end_matches('"')
                     .trim_start_matches('"')
                     .to_string();
 
-                rv = rv.add_hash_value(alg.to_string(), value.to_string());
+                rv = rv.add_reference_value(value.to_string());
             }
 
             res.push(rv);
@@ -287,7 +282,7 @@ pub mod test {
             .set_name("foo.tar.gz")
             .set_expired(Utc.with_ymd_and_hms(2030, 11, 18, 16, 6, 36).unwrap())
             .set_version("0.1.0")
-            .add_hash_value("sha256".into(), sha256_for_in_toto_test_artifact());
+            .add_reference_value(sha256_for_in_toto_test_artifact());
         let rv = vec![rv];
         let provenance = generate_in_toto_provenance();
         let res = e

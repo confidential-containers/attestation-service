@@ -120,9 +120,9 @@ impl RVPSAPI for Core {
                 }
 
                 let hash_values = rv
-                    .hash_values()
+                    .reference_value()
                     .iter()
-                    .map(|pair| pair.value().to_owned())
+                    .map(|pair| pair.to_owned())
                     .collect();
 
                 Ok(Some(TrustedDigest {

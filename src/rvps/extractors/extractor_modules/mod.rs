@@ -13,6 +13,8 @@ use crate::rvps::ReferenceValue;
 #[cfg(feature = "in-toto")]
 pub mod in_toto;
 
+pub mod simple_payload;
+
 /// Extractor is a standard interface that all provenance extractors
 /// need to implement. Here reference_value can be modified in the
 /// handler, added any field if needed.
@@ -33,6 +35,13 @@ impl ExtractorModuleList {
         // TODO: when new extractor is added, change mod_list
         // to mutable.
         let mut mod_list = HashMap::new();
+
+        {
+            let instantiate_func: ExtractorInstantiateFunc = Box::new(|| -> ExtractorInstance {
+                Box::<simple_payload::SimplePayloadExtractor>::default()
+            });
+            mod_list.insert("simple-payload".to_string(), instantiate_func);
+        }
 
         #[cfg(feature = "in-toto")]
         {
