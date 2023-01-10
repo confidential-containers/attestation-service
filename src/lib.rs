@@ -18,7 +18,7 @@ use anyhow::{anyhow, Context, Result};
 use config::Config;
 pub use kbs_types::{Attestation, Tee};
 use policy_engine::{PolicyEngine, PolicyEngineType};
-use rvps::RVPSAPI;
+use rvps::{Message, RVPSAPI};
 use std::collections::HashMap;
 use std::fs;
 use std::str::FromStr;
@@ -109,5 +109,10 @@ impl AttestationService {
             );
         }
         Ok(data)
+    }
+
+    /// Registry a new reference value
+    pub async fn registry_reference_value(&mut self, message: Message) -> Result<()> {
+        self.rvps.verify_and_extract(message)
     }
 }

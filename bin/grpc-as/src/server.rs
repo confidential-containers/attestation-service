@@ -1,5 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use attestation_service::{AttestationService as Service, Tee};
+use futures::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tonic::transport::Server;
@@ -8,7 +10,7 @@ use tonic::{Request, Response, Status};
 use crate::as_api::attestation_service_server::{AttestationService, AttestationServiceServer};
 use crate::as_api::{AttestationRequest, AttestationResponse, Tee as GrpcTee};
 
-const DEFAULT_SOCK: &str = "127.0.0.1:3000";
+type FutureVec = Vec<Pin<Box<dyn Future<Output = Result<(), anyhow::Error>>>>>;
 
 fn to_kbs_tee(tee: GrpcTee) -> Tee {
     match tee {
@@ -24,10 +26,9 @@ pub struct AttestationServer {
 }
 
 impl AttestationServer {
-    pub fn new() -> Result<Self> {
-        let service = Service::new()?;
+    pub fn new(attestation_service: Arc<RwLock<Service>>) -> Result<Self> {
         Ok(Self {
-            attestation_service: Arc::new(RwLock::new(service)),
+            attestation_service,
         })
     }
 }
@@ -69,15 +70,23 @@ impl AttestationService for AttestationServer {
     }
 }
 
-pub async fn start(socket: Option<&str>) -> Result<()> {
-    let socket = socket.unwrap_or(DEFAULT_SOCK).parse()?;
-    debug!("Listen socket: {}", &socket);
+pub fn start(socket: &str, redis_url: &str) -> Result<FutureVec> {
+    debug!("Listen socket: {}", socket);
+    let socket = socket.parse().context("parse socket addr failed")?;
+    let service = Service::new().context("create AS failed")?;
+    let inner = Arc::new(RwLock::new(service));
+    let attestation_server = AttestationServer::new(inner.clone())?;
 
-    let attestation_server = AttestationServer::new()?;
+    let redis_url = redis_url.to_string();
+    let subscriber_client = Box::pin(crate::subscriber::subscribe(redis_url, inner));
 
-    Server::builder()
-        .add_service(AttestationServiceServer::new(attestation_server))
-        .serve(socket)
-        .await?;
-    Ok(())
+    let grpc_server = Box::pin(async move {
+        Server::builder()
+            .add_service(AttestationServiceServer::new(attestation_server))
+            .serve(socket)
+            .await
+            .context("gRPC error")
+    });
+
+    Ok(vec![grpc_server, subscriber_client])
 }
