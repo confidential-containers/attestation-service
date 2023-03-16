@@ -65,7 +65,7 @@ impl AttestationService {
 
     /// Create a new Attestation Service, and connect to a remote rvps.
     #[cfg(feature = "rvps-grpc")]
-    pub async fn new_with_rvps_grpc(rvps_addr: &str, config: Config) -> Result<Self> {
+    pub async fn new_with_rvps_grpc(config: Config) -> Result<Self> {
         if !config.work_dir.as_path().exists() {
             fs::create_dir_all(&config.work_dir)
                 .map_err(|e| anyhow!("Create AS work dir failed: {:?}", e))?;
@@ -75,7 +75,7 @@ impl AttestationService {
             .map_err(|_| anyhow!("Policy Engine {} is not supported", &config.policy_engine))?
             .to_policy_engine(config.work_dir.as_path())?;
 
-        let rvps = Box::new(rvps::Agent::new(rvps_addr).await?);
+        let rvps = Box::new(rvps::Agent::new(&config.rvps_addr.to_string()).await?);
 
         Ok(Self {
             _config: config,
