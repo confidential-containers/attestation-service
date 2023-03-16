@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use std::convert::TryFrom;
 use std::fs::File;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::{Path, PathBuf};
 
 use crate::rvps::store::StoreType;
@@ -18,7 +19,13 @@ pub struct Config {
     /// Policy Engine type.
     pub policy_engine: String,
 
+    /// The storage type of RVPS. This is used when feature
+    /// `rvps-native` is enabled.
     pub rvps_store_type: StoreType,
+
+    /// This is used to connect a remote RVPS gRPC service
+    /// when `rvps-grpc` feature is enabled.
+    pub rvps_addr: SocketAddr,
 }
 
 impl Default for Config {
@@ -32,6 +39,7 @@ impl Default for Config {
             work_dir,
             policy_engine: "opa".to_string(),
             rvps_store_type: StoreType::LocalFs,
+            rvps_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 50003),
         }
     }
 }
@@ -41,7 +49,8 @@ impl TryFrom<&Path> for Config {
     ///    {
     ///        "work_dir": "/var/lib/attestation-service/",
     ///        "policy_engine": "opa",
-    ///        "rvps_store_type": "LocalFs"
+    ///        "rvps_store_type": "LocalFs",
+    ///        "rvps_addr": "127.0.0.1:50003"
     ///    }
     type Error = anyhow::Error;
     fn try_from(config_path: &Path) -> Result<Self, Self::Error> {
