@@ -36,7 +36,7 @@ pub struct AttestationServer {
 
 impl AttestationServer {
     pub async fn new(rvps_addr: Option<&str>, config_path: Option<&str>) -> Result<Self> {
-        let config = match config_path {
+        let mut config = match config_path {
             Some(path) => Config::try_from(Path::new(path))
                 .map_err(|e| anyhow!("Read AS config file failed: {:?}", e))?,
             None => Config::default(),
@@ -44,8 +44,9 @@ impl AttestationServer {
 
         let service = match rvps_addr {
             Some(addr) => {
+                config.rvps_addr = addr.parse()?;
                 info!("Connect to remote RVPS [{addr}] (gRPC Mode)");
-                Service::new_with_rvps_grpc(addr, config).await?
+                Service::new_with_rvps_grpc(config).await?
             }
             None => {
                 info!("Start a local RVPS (Server mode)");
