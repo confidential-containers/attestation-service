@@ -87,19 +87,19 @@ async fn verify_evidence(
             // they use different format headers.
             // TDVF still uses older versions of TDEL headers now, so it cannot be read using `CcEventLogReader`.
             // Related issue: https://github.com/confidential-containers/attestation-service/issues/81
-            let cc_events = match reader.cc_events.bytes.len() {
+            let cc_events = match reader.cc_events.clone().next() {
                 // The TDEL header is forcibly ignored here to support the current version of TDVF.
                 // After TDVF updates the CCEL format to the latest version, we need to delete the code here
-                0 => CcEvents {
+                None => CcEvents {
                     bytes: &ccel_data[65..],
                 },
-                _ => reader.cc_events,
+                Some(_) => reader.cc_events,
             };
 
             let ccel = CcEventLog { cc_events };
-            ccel_option = Some(ccel.clone());
+            log::debug!("Get CC Eventlog. \n{}\n", &ccel.clone());
 
-            log::debug!("Get CC Eventlog. \n{}\n", &ccel);
+            ccel_option = Some(ccel.clone());
 
             let rtmr_from_quote = Rtmr {
                 rtmr0: quote.report_body.rtmr_0,
