@@ -5,6 +5,6 @@ edition = "2021"
 
 [dependencies]
 # TODO: change it to "0.5", once released.
-kbs-types = { git = "https://github.com/virtee/kbs-types", rev = "c90df0e" }
+kbs-types = { git = "https://github.com/mkulke/kbs-types", rev = "a55f1a5" }
 serde.workspace = true
 serde_json.workspace = true

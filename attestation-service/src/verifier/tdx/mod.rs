@@ -11,9 +11,9 @@ use eventlog::{CcEventLog, Rtmr};
 use quote::{ecdsa_quote_verification, parse_tdx_quote};
 use sha2::{Digest, Sha384};
 
-mod claims;
+pub(crate) mod claims;
 mod eventlog;
-mod quote;
+pub(crate) mod quote;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct TdxEvidence {

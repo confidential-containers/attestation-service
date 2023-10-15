@@ -8,6 +8,9 @@ pub mod sample;
 #[cfg(feature = "az-snp-vtpm-verifier")]
 pub mod az_snp_vtpm;
 
+#[cfg(feature = "az-tdx-vtpm-verifier")]
+pub mod az_tdx_vtpm;
+
 #[cfg(feature = "snp-verifier")]
 pub mod snp;
 
@@ -31,7 +34,16 @@ pub(crate) fn to_verifier(tee: &Tee) -> Result<Box<dyn Verifier + Send + Sync>> 
                 if #[cfg(feature = "az-snp-vtpm-verifier")] {
                     Ok(Box::<az_snp_vtpm::AzSnpVtpm>::default() as Box<dyn Verifier + Send + Sync>)
                 } else {
-                    todo!()
+                    bail!("az-tdx-vtpm verifier not enabled.");
+                }
+            }
+        }
+        Tee::AzTdxVtpm => {
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "az-tdx-vtpm-verifier")] {
+                    Ok(Box::<az_tdx_vtpm::AzTdxVtpm>::default() as Box<dyn Verifier + Send + Sync>)
+                } else {
+                    bail!("az-tdx-vtpm verifier not enabled.");
                 }
             }
         }
