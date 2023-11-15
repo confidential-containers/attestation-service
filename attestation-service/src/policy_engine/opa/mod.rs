@@ -119,7 +119,7 @@ impl PolicyEngine for OPA {
             bail!("OPA Policy Engine only support .rego policy");
         }
 
-        let policy_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        let policy_bytes = base64::engine::general_purpose::STANDARD
             .decode(input.policy)
             .map_err(|e| anyhow!("Base64 decode OPA policy string failed: {:?}", e))?;
         let mut policy_file_path = PathBuf::from(
@@ -192,7 +192,7 @@ default allow = true"
         let input = SetPolicyInput {
             r#type: "rego".to_string(),
             policy_id: "test".to_string(),
-            policy: base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(policy),
+            policy: base64::engine::general_purpose::STANDARD.encode(policy),
         };
 
         assert!(opa.set_policy(input).await.is_ok());
