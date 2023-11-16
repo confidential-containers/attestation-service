@@ -208,14 +208,11 @@ fn parse_kernel_parameters(kernel_parameters: &[u8]) -> Result<Map<String, Value
             if item.is_empty() {
                 return None;
             }
-            let it: Vec<&str> = item.split('=').collect();
-            match it.len() {
-                1 => Some((it[0].to_owned(), Value::Null)),
-                2 => Some((it[0].to_owned(), Value::String(it[1].to_owned()))),
-                _ => {
-                    warn!("Illegal parameter: {item}");
-                    None
-                }
+            let it = item.split_once('=');
+
+            match it {
+                Some((k, v)) => Some((k.into(), v.into())),
+                None => Some((item.to_string(), Value::Null)),
             }
         })
         .collect();
@@ -410,42 +407,45 @@ mod tests {
                     ),
                 ],
             },
-            // Params containing equals in their values are silently dropped
             TestData {
                 params: b"a==",
                 fail: false,
-                result: vec![],
+                result: vec![("a".into(), to_value("=").unwrap())],
             },
             TestData {
                 params: b"a==b",
                 fail: false,
-                result: vec![],
+                result: vec![("a".into(), to_value("=b").unwrap())],
             },
             TestData {
                 params: b"a==b=",
                 fail: false,
-                result: vec![],
+                result: vec![("a".into(), to_value("=b=").unwrap())],
             },
             TestData {
                 params: b"a=b=c",
                 fail: false,
-                result: vec![],
+                result: vec![("a".into(), to_value("b=c").unwrap())],
             },
             TestData {
                 params: b"a==b=c",
                 fail: false,
-                result: vec![],
+                result: vec![("a".into(), to_value("=b=c").unwrap())],
             },
             TestData {
                 params: b"module_foo=bar=baz,wibble_setting=2",
                 fail: false,
-                result: vec![],
+                result: vec![(
+                    "module_foo".into(),
+                    to_value("bar=baz,wibble_setting=2").unwrap(),
+                )],
             },
             TestData {
                 params: b"a=b c== d=e",
                 fail: false,
                 result: vec![
                     ("a".into(), to_value("b").unwrap()),
+                    ("c".into(), to_value("=").unwrap()),
                     ("d".into(), to_value("e").unwrap()),
                 ],
             },
