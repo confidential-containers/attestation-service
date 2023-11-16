@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install protobuf-compiler -y
 
 RUN cargo install --path bin/rvps
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 LABEL org.opencontainers.image.source="https://github.com/confidential-containers/attestation-service"
 
