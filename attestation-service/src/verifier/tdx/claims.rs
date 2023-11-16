@@ -226,11 +226,11 @@ fn parse_kernel_parameters(kernel_parameters: &[u8]) -> Result<Map<String, Value
 #[cfg(test)]
 mod tests {
     use assert_json_diff::assert_json_eq;
-    use serde_json::json;
+    use serde_json::{json, to_value, Value};
 
     use crate::verifier::tdx::{eventlog::CcEventLog, quote::parse_tdx_quote};
 
-    use super::generate_parsed_claim;
+    use super::{generate_parsed_claim, parse_kernel_parameters};
 
     #[test]
     fn parse_tdx_claims() {
@@ -274,5 +274,227 @@ mod tests {
         });
 
         assert_json_eq!(expected, claims);
+    }
+
+    #[test]
+    fn test_parse_kernel_parameters() {
+        #[derive(Debug)]
+        struct TestData<'a> {
+            params: &'a [u8],
+            fail: bool,
+            result: Vec<(String, Value)>,
+        }
+
+        let tests = &[
+            TestData {
+                params: b"",
+                fail: false,
+                result: vec![],
+            },
+            // Invalid UTF8 data
+            TestData {
+                params: b"\xff\xff",
+                fail: true,
+                result: vec![],
+            },
+            // Invalid UTF8 data
+            TestData {
+                params: b"foo=\xff\xff",
+                fail: true,
+                result: vec![],
+            },
+            TestData {
+                params: b"name_only",
+                fail: false,
+                result: vec![("name_only".into(), Value::Null)],
+            },
+            TestData {
+                params: b"a=b",
+                fail: false,
+                result: vec![("a".into(), to_value("b").unwrap())],
+            },
+            TestData {
+                params: b"\ra=b",
+                fail: false,
+                result: vec![("a".into(), to_value("b").unwrap())],
+            },
+            TestData {
+                params: b"\na=b",
+                fail: false,
+                result: vec![("a".into(), to_value("b").unwrap())],
+            },
+            TestData {
+                params: b"a=b\nc=d",
+                fail: false,
+                result: vec![
+                    ("a".into(), to_value("b").unwrap()),
+                    ("c".into(), to_value("d").unwrap()),
+                ],
+            },
+            TestData {
+                params: b"a=b\n\nc=d",
+                fail: false,
+                result: vec![
+                    ("a".into(), to_value("b").unwrap()),
+                    ("c".into(), to_value("d").unwrap()),
+                ],
+            },
+            TestData {
+                params: b"a=b\rc=d",
+                fail: false,
+                result: vec![
+                    ("a".into(), to_value("b").unwrap()),
+                    ("c".into(), to_value("d").unwrap()),
+                ],
+            },
+            TestData {
+                params: b"a=b\r\rc=d",
+                fail: false,
+                result: vec![
+                    ("a".into(), to_value("b").unwrap()),
+                    ("c".into(), to_value("d").unwrap()),
+                ],
+            },
+            TestData {
+                params: b"a=b\rc=d\ne=foo",
+                fail: false,
+                result: vec![
+                    ("a".into(), to_value("b").unwrap()),
+                    ("c".into(), to_value("d").unwrap()),
+                    ("e".into(), to_value("foo").unwrap()),
+                ],
+            },
+            TestData {
+                params: b"a=b\rc=d\nname_only\0e=foo",
+                fail: false,
+                result: vec![
+                    ("a".into(), to_value("b").unwrap()),
+                    ("c".into(), to_value("d").unwrap()),
+                    ("name_only".into(), Value::Null),
+                    ("e".into(), to_value("foo").unwrap()),
+                ],
+            },
+            TestData {
+                params: b"foo='bar'",
+                fail: false,
+                result: vec![("foo".into(), to_value("'bar'").unwrap())],
+            },
+            TestData {
+                params: b"foo=\"bar\"",
+                fail: false,
+                result: vec![("foo".into(), to_value("\"bar\"").unwrap())],
+            },
+            // Spaces in parameter values are not supported.
+            // XXX: Note carefully the apostrophe values below!
+            TestData {
+                params: b"params_with_spaces_do_not_work='a b c'",
+                fail: false,
+                result: vec![
+                    ("b".into(), Value::Null),
+                    ("c'".into(), Value::Null),
+                    (
+                        "params_with_spaces_do_not_work".into(),
+                        to_value("'a").unwrap(),
+                    ),
+                ],
+            },
+            TestData {
+                params: b"params_with_spaces_do_not_work=\"a b c\"",
+                fail: false,
+                result: vec![
+                    ("b".into(), Value::Null),
+                    ("c\"".into(), Value::Null),
+                    (
+                        "params_with_spaces_do_not_work".into(),
+                        to_value("\"a").unwrap(),
+                    ),
+                ],
+            },
+            // Params containing equals in their values are silently dropped
+            TestData {
+                params: b"a==",
+                fail: false,
+                result: vec![],
+            },
+            TestData {
+                params: b"a==b",
+                fail: false,
+                result: vec![],
+            },
+            TestData {
+                params: b"a==b=",
+                fail: false,
+                result: vec![],
+            },
+            TestData {
+                params: b"a=b=c",
+                fail: false,
+                result: vec![],
+            },
+            TestData {
+                params: b"a==b=c",
+                fail: false,
+                result: vec![],
+            },
+            TestData {
+                params: b"module_foo=bar=baz,wibble_setting=2",
+                fail: false,
+                result: vec![],
+            },
+            TestData {
+                params: b"a=b c== d=e",
+                fail: false,
+                result: vec![
+                    ("a".into(), to_value("b").unwrap()),
+                    ("d".into(), to_value("e").unwrap()),
+                ],
+            },
+        ];
+
+        for (i, d) in tests.iter().enumerate() {
+            let msg = format!(
+                "test[{}]: {:?} (params: {:?})",
+                i,
+                d,
+                String::from_utf8_lossy(&d.params.to_vec()),
+            );
+
+            let result = parse_kernel_parameters(d.params);
+
+            let msg = format!("{}: actual result: {:?}", msg, result);
+
+            if std::env::var("DEBUG").is_ok() {
+                eprintln!("DEBUG: {}", msg);
+            }
+
+            if d.fail {
+                assert!(result.is_err(), "{}", msg);
+                continue;
+            }
+
+            let result = result.unwrap();
+            let actual_count = result.len();
+
+            let expected_count = d.result.len();
+
+            let msg = format!("{}: actual_count: {:?}", msg, actual_count);
+
+            assert_eq!(actual_count, expected_count, "{}", msg);
+
+            for expected_kv in &d.result {
+                let key = &expected_kv.0;
+                let value = &expected_kv.1;
+
+                let value_found = result.get(key);
+
+                let kv_msg = format!("{}: key: {:?}, value: {:?}", msg, key, value);
+
+                assert!(value_found.is_some(), "{}", kv_msg);
+
+                let value_found = value_found.unwrap();
+
+                assert_eq!(value_found, value, "{}", kv_msg);
+            }
+        }
     }
 }

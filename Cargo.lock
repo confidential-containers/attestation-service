@@ -807,13 +807,14 @@ dependencies = [
 [[package]]
 name = "csv-rs"
 version = "0.1.0"
-source = "git+https://gitee.com/anolis/csv-rs?rev=05fbacd#05fbacd8ffff3d48bb19319da1c9a84b763d9302"
+source = "git+https://gitee.com/anolis/csv-rs?rev=9d8882e#9d8882e005ab0f64f4e3802a37aebfc61bc4fe32"
 dependencies = [
  "bitfield 0.13.2",
  "codicon",
  "hyper",
  "hyper-tls",
  "iocuddle",
+ "libc",
  "openssl",
  "openssl-sys",
  "rand",
