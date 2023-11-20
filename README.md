@@ -1,5 +1,7 @@
 # Attestation Service
 
+**This project has been consolidated with the Key Broker Service and now lives [here](https://github.com/confidential-containers/kbs/tree/main/attestation-service).**
+
 Attestation Service (AS for short) is a general function set that can verify TEE evidence.
 With Confidential Containers, the attestation service must run in an secure environment, outside of the guest node.
 
